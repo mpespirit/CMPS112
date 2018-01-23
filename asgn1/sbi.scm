@@ -12,6 +12,62 @@
 ;;    program, which is the executed.  Currently it is only printed.
 ;;
 
+;; Hash Table stuff: variable table, lable table, function table
+(define *variable-table* (make-hash))
+(define (var-get key)
+        (hash-ref *variable-table* key))
+(define (var-put! key value)
+        (hash-set! *variable-table* key value))
+
+(for-each
+    (lambda (pair)
+            (var-put! (car pair) (cadr pair)))
+    `(
+
+        (log10_2 0.301029995663981195213738894724493026768189881)
+        (sqrt_2  1.414213562373095048801688724209698078569671875)
+        (e       2.718281828459045235360287471352662497757247093)
+        (pi      3.141592653589793238462643383279502884197169399)
+        (div     ,(lambda (x y) (floor (/ x y))))
+        (log10   ,(lambda (x) (/ (log x) (log 10.0))))
+        (mod     ,(lambda (x y) (- x (* (div x y) y))))
+        (quot    ,(lambda (x y) (truncate (/ x y))))
+        (rem     ,(lambda (x y) (- x (* (quot x y) y))))
+        (+       ,+)
+        (^       ,expt)
+        (ceil    ,ceiling)
+        (exp     ,exp)
+        (floor   ,floor)
+        (log     ,log)
+        (sqrt    ,sqrt)
+
+     ))
+; Label table holds string labels for those lines where they appear
+; Key is the label, Value is the line number to which the label refers
+(define *label-table* (make-hash))
+(define (label-get key)
+        (hash-ref *label-table* key))
+(define (label-put! key value)
+        (hash-set! *label-table* key value))
+
+;; Function table holds functions and operators
+(define *function-table* (make-hash))
+(define (func-get key)
+        (hash-ref *function-table* key))
+(define (func-put! key value)
+        (hash-set! *function-table* key value))
+
+;; 
+;; What category of object is this?
+;; 
+(define (what-kind value)
+    (cond ((real? value) 'real)
+             ((vector? value) 'vector)
+                        ((procedure? value) 'procedure)
+                                  (else 'other)))
+;;
+;; Heart of the program below
+;;
 (define *stderr* (current-error-port))
 
 (define *run-file*
@@ -39,13 +95,41 @@
                   (close-input-port inputfile)
                          program))))
 
+(define (parse-line program line-nr)
+    (when (> (length program) line-nr)
+        (let ((line (list-ref program line-nr)))
+             ;(printf "~s~n" line)
+             (cond ( (= (length line) 2) 
+                     (parse-statement (cadr line)))
+                   ( (= (length line) 3)
+                     (parse-statement (caddr line))))
+             (parse-line program (+ line-nr 1))
+        )
+    )
+)
+
+(define (parse-statement statement)
+    (cond ( (eq? 'print (car statement ))
+            (do-print (cdr statement) )  )))
+
+(define (do-print printable) 
+    (display (car printable ) )
+    (when (not (null? (cdr printable)))
+          (do-print cdr printable) ) 
+    (newline)
+) 
+
 (define (write-program-by-line filename program)
-    (printf "==================================================~n")
-    (printf "~a: ~s~n" *run-file* filename)
-    (printf "==================================================~n")
-    (printf "(~n")
-    (map (lambda (line) (printf "~s~n" line)) program)
-    (printf ")~n"))
+    ;(printf "==================================================~n")
+    ;(printf "~a: ~s~n" *run-file* filename)
+    ;(printf "==================================================~n")
+    ;(printf "(~n")
+    ;(map (lambda (line) (printf "~s~n" line)) program)
+    ;(map (lambda (line) (
+    ;(printf ")~n")
+
+    (parse-line program 0)
+ne)
 
 (define (main arglist)
     (if (or (null? arglist) (not (null? (cdr arglist))))
