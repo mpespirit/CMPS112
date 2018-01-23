@@ -19,6 +19,8 @@
 (define (var-put! key value)
         (hash-set! *variable-table* key value))
 
+;; Separate into function and variable tables
+;; Add relops, binops, 
 (for-each
     (lambda (pair)
             (var-put! (car pair) (cadr pair)))
@@ -42,6 +44,8 @@
         (sqrt    ,sqrt)
 
      ))
+
+
 ; Label table holds string labels for those lines where they appear
 ; Key is the label, Value is the line number to which the label refers
 (define *label-table* (make-hash))
@@ -95,6 +99,12 @@
                   (close-input-port inputfile)
                          program))))
 
+;;
+;; Real work starts below
+;;
+
+;; Goes to a provided line in program and finds/isolates statement 
+;; component of line for further processing by parse-statement
 (define (parse-line program line-nr)
     (when (> (length program) line-nr)
         (let ((line (list-ref program line-nr)))
@@ -108,16 +118,24 @@
     )
 )
 
+;; Figures out species of statement. Passes statement to appropriate function
+;; 'print' or 'if' or 'input' or 'goto' or 'dim' or 'let'
 (define (parse-statement statement)
     (cond ( (eq? 'print (car statement ))
             (do-print (cdr statement) )  )))
 
+;; Recursively prints each statement
 (define (do-print printable) 
     (display (car printable ) )
     (when (not (null? (cdr printable)))
           (do-print cdr printable) ) 
     (newline)
 ) 
+
+;; Expression shit
+(define (parse-expression expr)
+    (cond ( ( ) ))
+)
 
 (define (write-program-by-line filename program)
     ;(printf "==================================================~n")
@@ -127,10 +145,12 @@
     ;(map (lambda (line) (printf "~s~n" line)) program)
     ;(map (lambda (line) (
     ;(printf ")~n")
-
+    
+    ;; goes to line 0 of input program
     (parse-line program 0)
-ne)
+)
 
+;; orgiastic loop that came with sample code
 (define (main arglist)
     (if (or (null? arglist) (not (null? (cdr arglist))))
         (usage-exit)
