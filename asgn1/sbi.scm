@@ -19,32 +19,60 @@
 (define (var-put! key value)
         (hash-set! *variable-table* key value))
 
+;; Function table holds functions and operators
+(define *function-table* (make-hash))
+(define (func-get key)
+		(hash-ref *function-table* key))
+(define (func-put! key value)
+		(hash-set! *function-table* key value))
+			   
 ;; Separate into function and variable tables
 ;; Add relops, binops, 
 (for-each
-    (lambda (pair)
-            (var-put! (car pair) (cadr pair)))
-    `(
+	(lambda (pair)
+		(func-put! (car pair) (cadr pair)))
+	`(
+		(+		 ,+)
+		(-       ,-)
+		(*       ,*)
+		(/	     ,(lambda (x y) (floor (/ x y))))
+		(%	     ,(lambda (x y) (- x (* (div x y) y))))
+		(>       ,>)
+		(=       ,(lambda (x y) (eqv? x y)))
+		(<=      ,(lambda (x y) (<=   x y)))
+		(>=      ,(lambda (x y) (>=   x y)))
+		(<>      ,(lambda (x y) (not (equal? x y))))
+		(^		 ,(lambda (x y) (expt x y)))
+		(abs     ,abs)
+		(acos    ,acos)
+		(asin    ,asin)
+		(atan    ,atan) ;NEEDS TO BE A LAMBDA FUNCTION
+		(ceil    ,ceiling)
+		(cos     ,cos)
+		(exp     ,exp)
+		(floor	 ,floor)
+		(log	 ,log)
+		(log10	 ,(lambda (x) (/ (log x) (log 10.0))))
+		(log10_2 0.301029995663981195213738894724493026768189881)
+		(quot	 ,(lambda (x y) (truncate (/ x y))))
+		(rem	 ,(lambda (x y) (- x (* (quot x y) y))))
+		(round   ,round)
+		(sin     ,sin)
+		(sqrt	 ,sqrt)	
+		(sqrt_2	 1.414213562373095048801688724209698078569671875)
+		(tan     ,tan)
+		(trunc   ,trunc)
+	)
+)
 
-        (log10_2 0.301029995663981195213738894724493026768189881)
-        (sqrt_2  1.414213562373095048801688724209698078569671875)
-        (e       2.718281828459045235360287471352662497757247093)
-        (pi      3.141592653589793238462643383279502884197169399)
-        (div     ,(lambda (x y) (floor (/ x y))))
-        (log10   ,(lambda (x) (/ (log x) (log 10.0))))
-        (mod     ,(lambda (x y) (- x (* (div x y) y))))
-        (quot    ,(lambda (x y) (truncate (/ x y))))
-        (rem     ,(lambda (x y) (- x (* (quot x y) y))))
-        (+       ,+)
-        (^       ,expt)
-        (ceil    ,ceiling)
-        (exp     ,exp)
-        (floor   ,floor)
-        (log     ,log)
-        (sqrt    ,sqrt)
-
-     ))
-
+(for-each
+	(lambda (pair)
+		(var-put! (car pair) (cadr pair)))
+	`(
+		(e		 2.718281828459045235360287471352662497757247093)
+		(pi		 3.141592653589793238462643383279502884197169399)
+	)
+)
 
 ; Label table holds string labels for those lines where they appear
 ; Key is the label, Value is the line number to which the label refers
@@ -53,13 +81,6 @@
         (hash-ref *label-table* key))
 (define (label-put! key value)
         (hash-set! *label-table* key value))
-
-;; Function table holds functions and operators
-(define *function-table* (make-hash))
-(define (func-get key)
-        (hash-ref *function-table* key))
-(define (func-put! key value)
-        (hash-set! *function-table* key value))
 
 ;; 
 ;; What category of object is this?
@@ -121,20 +142,25 @@
 ;; Figures out species of statement. Passes statement to appropriate function
 ;; 'print' or 'if' or 'input' or 'goto' or 'dim' or 'let'
 (define (parse-statement statement)
-    (cond ( (eq? 'print (car statement ))
-            (do-print (cdr statement) )  )))
+    (cond (( and (eq? 'print (car statement))
+                (not (null? (cdr statement))))
+                (do-print (cdr statement))  ) ))
 
 ;; Recursively prints each statement
 (define (do-print printable) 
-    (display (car printable ) )
+    (if (string? (car printable))
+        (display (car printable ) )
+        (display (parse-expression (car printable) )))
     (when (not (null? (cdr printable)))
-          (do-print cdr printable) ) 
+          (do-print (cdr printable) ) )
     (newline)
 ) 
 
 ;; Expression shit
 (define (parse-expression expr)
-    (cond ( ( ) ))
+    (cond ( (= (length expr) 1)  expr)
+          ( (= (length expr) 2)  expr)
+          ( (= (length expr) 3)  expr))
 )
 
 (define (write-program-by-line filename program)
