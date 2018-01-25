@@ -35,8 +35,8 @@
 		(+       ,+)
 		(-       ,-)
 		(*       ,*)
-		(/       ,(lambda (x y) (floor (/ x y))))
-		(%       ,(lambda (x y) (- x (* (div x y) y))))
+		(/       ,(lambda (x y) (floor (/ (+ x 0.0) (+ y 0.0)))))
+		(%       ,(lambda (x y) (- x (* (/ x y) y))))
 		(>       ,>)
 		(=       ,(lambda (x y) (eqv? x y)))
 		(<=      ,(lambda (x y) (<=   x y)))
@@ -178,12 +178,13 @@
                (printf "~s is not a valid operator ~n" expr)
             )
         )
-        (if (number? expr) expr
+        ;add 0.0 to the number to ensure it is a real number
+        (if (number? expr) (+ expr 0.0)
             ;apply the operator to each list item
             ;Ex: (map + '(1 2))
             ;    (+ 1)(+ 2)
             ;    (apply + (+ 1) (+ 2)) -> 3
-            ;Recursive call to parse-expr analyzes nested expressions
+            ;If not a number, recursively analyze the list
             (apply (func-get (car expr)) (map parse-expr (cdr expr)))
         )
     )
