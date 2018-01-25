@@ -144,9 +144,21 @@
 (define (parse-statement statement)
     (cond (( and (eq? 'print (car statement))
                 (not (null? (cdr statement))))
-                (do-print (cdr statement))  ) ))
+                (do-print (cdr statement))  ) 
+          ;; If car reads 'let' check that two args present
+          (( and (eq? 'let (car statement))
+                (not (null? (cdr statement)))
+                (not (null? (cdr statement))))
+                (do-let (cdr statement))  )
+          (( and (eq? 'dim (car statement))
+                (list? (cdr statement)))
+                (do-dim (cadr statement) ))
+    )
+)
 
-;; Recursively prints each statement
+;; Recursively prints each statement.
+;; If it's a string just print that. If it's an expression, evaluate 
+;; then print. It's otherwise assumed to be a variable.
 (define (do-print printable) 
     (if (or (string? (car printable))
             (real? (car printable))  )
@@ -159,6 +171,17 @@
     (newline)
 ) 
 
+;; initiates array, puts in var table
+(define (do-dim arr)
+   ;(display arr)(newline)(newline)
+   ;(display (car arr))(display (cadr arr))(newline)(newline)
+   (var-put! 
+      (car arr) (make-vector (exact-round (parse-expr (cadr arr))))))
+
+;; Evaluate let expresson and push value to variable table
+(define (do-let var)
+    (var-put! (car var) (parse-expr (cadr var)))
+)
 ;; Recursively analyze expressions
 (define (parse-expr expr)
     (if (symbol? expr)
