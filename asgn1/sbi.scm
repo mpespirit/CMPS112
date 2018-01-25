@@ -32,17 +32,17 @@
 	(lambda (pair)
 		(func-put! (car pair) (cadr pair)))
 	`(
-		(+		 ,+)
+		(+       ,+)
 		(-       ,-)
 		(*       ,*)
-		(/	     ,(lambda (x y) (floor (/ x y))))
-		(%	     ,(lambda (x y) (- x (* (div x y) y))))
+		(/       ,(lambda (x y) (floor (/ x y))))
+		(%       ,(lambda (x y) (- x (* (div x y) y))))
 		(>       ,>)
 		(=       ,(lambda (x y) (eqv? x y)))
 		(<=      ,(lambda (x y) (<=   x y)))
 		(>=      ,(lambda (x y) (>=   x y)))
 		(<>      ,(lambda (x y) (not (equal? x y))))
-		(^		 ,(lambda (x y) (expt x y)))
+		(^       ,(lambda (x y) (expt x y)))
 		(abs     ,abs)
 		(acos    ,acos)
 		(asin    ,asin)
@@ -61,7 +61,7 @@
 		(sqrt	 ,sqrt)	
 		(sqrt_2	 1.414213562373095048801688724209698078569671875)
 		(tan     ,tan)
-		(trunc   ,trunc)
+		(trunc   ,truncate)
 	)
 )
 
@@ -69,8 +69,8 @@
 	(lambda (pair)
 		(var-put! (car pair) (cadr pair)))
 	`(
-		(e		 2.718281828459045235360287471352662497757247093)
-		(pi		 3.141592653589793238462643383279502884197169399)
+		(e      2.718281828459045235360287471352662497757247093)
+		(pi     3.141592653589793238462643383279502884197169399)
 	)
 )
 
@@ -148,20 +148,66 @@
 
 ;; Recursively prints each statement
 (define (do-print printable) 
-    (if (string? (car printable))
+    (if (or (string? (car printable))
+            (real? (car printable))  )
         (display (car printable ) )
-        (display (parse-expression (car printable) )))
+    ;else
+        (display (parse-expr (car printable) )))
+    ;if there are still more printables, print those too
     (when (not (null? (cdr printable)))
           (do-print (cdr printable) ) )
     (newline)
 ) 
 
-;; Expression shit
-(define (parse-expression expr)
-    (cond ( (= (length expr) 1)  expr)
-          ( (= (length expr) 2)  expr)
-          ( (= (length expr) 3)  expr))
+;; Recursively analyze expressions
+;; Handle 0's and + -
+;; Grammar:
+;;    E -> ( Binop Expr Expr )
+;;    E -> ( Unop  Expr Expr )
+;;    E -> ( Func  Expr      )
+;;    E ->   Constant
+;;    E ->   Memory
+;;    B ->   Unop | * | / | % | ^
+;;    U ->   + | -
+(define (parse-expr expr)
+    (if (symbol? expr)
+        (if (hash-has-key? *function-table* expr)
+            (hash-ref *function-table* expr)
+            (if (hash-has-key? *variable-table* expr)
+               (hash-ref *variable-table* expr)
+               (printf "~s is not a valid operator ~n" expr)
+            )
+        )
+        (if (number? expr) expr
+            ;apply the operator to each list item
+            ;Ex: (map + '(1 2))
+            ;    (+ 1)(+ 2)
+            ;    (apply + (+ 1) (+ 2)) -> 3
+            ;Recursive call to parse-expr analyzes nested expressions
+            (apply (func-get (car expr)) (map parse-expr (cdr expr)))
+        )
+    )
 )
+
+;; Expression shite
+;(define (parse-expression expr)
+;    (define (parse-expr expr)
+;            (if (real? expr)  expr
+;              ( ; (printf "not number ~n")
+;                (display expr)(newline)
+;                (cond ( (= (length expr) 2)
+;                        ;(printf "not number, expr length 2 ~n")
+;                        (display expr)(newline)
+;                        ;(display (car expr))(newline)(display (cadr expr))(newline)
+;                        ;expr = (1 1) <- figure out how to analyze
+;                        ;(parse-expr (car expr)))
+;                        (parse-expr (car expr)
+;                        (parse-expr (cadr expr))))
+;                      ( (= (length expr) 3)
+;                        ;(parse-expr (cdr expr))
+;                        (parse-expr (cdr expr)))))) )
+;    (parse-expr expr) 
+;)                 
 
 (define (write-program-by-line filename program)
     ;(printf "==================================================~n")
