@@ -160,15 +160,6 @@
 ) 
 
 ;; Recursively analyze expressions
-;; Handle 0's and + -
-;; Grammar:
-;;    E -> ( Binop Expr Expr )
-;;    E -> ( Unop  Expr Expr )
-;;    E -> ( Func  Expr      )
-;;    E ->   Constant
-;;    E ->   Memory
-;;    B ->   Unop | * | / | % | ^
-;;    U ->   + | -
 (define (parse-expr expr)
     (if (symbol? expr)
         (if (hash-has-key? *function-table* expr)
@@ -188,27 +179,7 @@
             (apply (func-get (car expr)) (map parse-expr (cdr expr)))
         )
     )
-)
-
-;; Expression shite
-;(define (parse-expression expr)
-;    (define (parse-expr expr)
-;            (if (real? expr)  expr
-;              ( ; (printf "not number ~n")
-;                (display expr)(newline)
-;                (cond ( (= (length expr) 2)
-;                        ;(printf "not number, expr length 2 ~n")
-;                        (display expr)(newline)
-;                        ;(display (car expr))(newline)(display (cadr expr))(newline)
-;                        ;expr = (1 1) <- figure out how to analyze
-;                        ;(parse-expr (car expr)))
-;                        (parse-expr (car expr)
-;                        (parse-expr (cadr expr))))
-;                      ( (= (length expr) 3)
-;                        ;(parse-expr (cdr expr))
-;                        (parse-expr (cdr expr)))))) )
-;    (parse-expr expr) 
-;)                 
+)      
 
 (define (write-program-by-line filename program)
     ;(printf "==================================================~n")
