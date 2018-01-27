@@ -1,0 +1,3 @@
+sci.sbm takes in an SBIR file and interpretrs and executes according to
+the rulles of the language. The input is a single .sbir file passed as
+a command line argument. 
