@@ -1,6 +1,9 @@
 #!/afs/cats.ucsc.edu/courses/cmps112-wm/usr/racket/bin/mzscheme -qr
 ;; $Id: sbi.scm,v 1.3 2016-09-23 18:23:20-07 - - $
 ;;
+;; Paula Espiritu mespirit@ucsc.edu
+;; Spenser Estrada spmestra@ucsc.edu
+;;
 ;; NAME
 ;;    sbi.scm - silly basic interpreter
 ;;
@@ -129,9 +132,14 @@
     (when (> (length program) line-nr)
         (let ((line (list-ref program line-nr)))
            (printf ";; find-labels ~s~n" line)
-           (when (and (= (length line) 3)
-                      (string? (cadr line)))
-                 (label-set! (cadr line) line-nr)
+           (when (> (length line) 1)
+              (printf ";; find-labels: longer than 1 ~n")
+              (when ( and (not (list? (cadr line) ) )
+                          (not ( hash-has-key? *variable-table* (cadr line))) )
+                 (label-put! (cadr line) line-nr )
+                 (printf ";; find-lables: put to var as ~s:~s~n"
+                      (cadr line) (label-get (cadr line)) )
+              )
            )
            (find-labels program (+ line-nr 1))
         )
@@ -142,27 +150,33 @@
 ;; Goes to a provided line in program and finds/isolates statement 
 ;; component of line for further processing by parse-statement
 (define (parse-line program line-nr)
-    (when (> (length program) line-nr)
-        (let ((line (list-ref program line-nr)))
-             (printf ";; parse-line: ~s~n" line)
-             (if (= (length line) 2) 
-                 (if (list? (cadr line))
-                     (parse-statement (cadr line))
-                     (void)
-                 )
-                 (if (= (length line) 3)
-                     (parse-statement (caddr line))
-                     (void)
-                 )
-             )
-             (parse-line program (+ line-nr 1))
-        )
+   (when (> (length program) line-nr)
+      (let ((line (list-ref program line-nr)))
+           (printf ";; parse-line: ~s~n" line )
+           (when (and (not (null? (cdr line)))
+                      (eq? 'done (cadr line)))
+                  (usage-exit)
+           )
+           (cond ((and (= (length line) 2)
+                      (list? (cadr line)) ) 
+                  (printf ";;parse-line: cadr line: ~s~n" (cadr line))
+                  (printf ";; parse-line; length 2, list? ~s~n" 
+                         (list? (cadr line)))
+                  (parse-statement program (cadr line)) ) 
+                 ((= (length line) 3)
+                  (printf ";;parse-line: cadr line: ~s~n" (cadr line))
+                  (printf ";; parse-line; length 3, list? ~s~n"
+                         (list? (cadr line)))
+                  (parse-statement program (caddr line)) )
+           )
+      ) 
+      (parse-line program (+ line-nr 1))
     )
 )
 
 ;; Figures out species of statement. Passes statement to appropriate function
 ;; 'print' or 'if' or 'input' or 'goto' or 'dim' or 'let'
-(define (parse-statement statement)
+(define (parse-statement program statement)
     (printf ";; parse-statement: ~s~n" statement)
     (cond (( and (eq? 'print (car statement))
                 (not (null? (cdr statement))))
@@ -176,6 +190,9 @@
           (( and (eq? 'dim (car statement))
                 (list? (cdr statement)))
                 (do-dim (cadr statement) ))
+          ((eq? 'goto (car statement))
+                (parse-line program (label-get (cadr statement)))
+          )
     )
     (printf ";; parse-statement: leaving~n")
 )
