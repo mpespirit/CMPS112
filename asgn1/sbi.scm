@@ -131,14 +131,14 @@
 (define (find-labels program line-nr)
     (when (> (length program) line-nr)
         (let ((line (list-ref program line-nr)))
-           (printf ";; find-labels ~s~n" line)
+   ;       ;(printf ";; find-labels ~s~n" line)
            (when (> (length line) 1)
-              (printf ";; find-labels: longer than 1 ~n")
+   ;         ;(printf ";; find-labels: longer than 1 ~n")
               (when ( and (not (list? (cadr line) ) )
                           (not ( hash-has-key? *variable-table* (cadr line))) )
                  (label-put! (cadr line) line-nr )
-                 (printf ";; find-lables: put to var as ~s:~s~n"
-                      (cadr line) (label-get (cadr line)) )
+            ;     (printf ";; find-lables: put to var as ~s:~s~n"
+            ;         (cadr line) (label-get (cadr line)) )
               )
            )
            (find-labels program (+ line-nr 1))
@@ -152,21 +152,21 @@
 (define (parse-line program line-nr)
    (when (> (length program) line-nr)
       (let ((line (list-ref program line-nr)))
-           (printf ";; parse-line: ~s~n" line )
+  ;         (printf ";; parse-line: ~s~n" line )
            (when (and (not (null? (cdr line)))
                       (eq? 'done (cadr line)))
-                  (usage-exit)
+                 (die `(""))
            )
            (cond ((and (= (length line) 2)
                       (list? (cadr line)) ) 
-                  (printf ";;parse-line: cadr line: ~s~n" (cadr line))
-                  (printf ";; parse-line; length 2, list? ~s~n" 
-                         (list? (cadr line)))
+  ;               (printf ";;parse-line: cadr line: ~s~n" (cadr line))
+  ;               (printf ";; parse-line; length 2, list? ~s~n" 
+  ;                   (list? (cadr line)))
                   (parse-statement program (cadr line)) ) 
                  ((= (length line) 3)
-                  (printf ";;parse-line: cadr line: ~s~n" (cadr line))
-                  (printf ";; parse-line; length 3, list? ~s~n"
-                         (list? (cadr line)))
+  ;               (printf ";;parse-line: cadr line: ~s~n" (cadr line))
+  ;               (printf ";; parse-line; length 3, list? ~s~n"
+  ;                   (list? (cadr line)))
                   (parse-statement program (caddr line)) )
            )
       ) 
@@ -177,15 +177,15 @@
 ;; Figures out species of statement. Passes statement to appropriate function
 ;; 'print' or 'if' or 'input' or 'goto' or 'dim' or 'let'
 (define (parse-statement program statement)
-    (printf ";; parse-statement: ~s~n" statement)
+ ;   (printf ";; parse-statement: ~s~n" statement)
     (cond (( and (eq? 'print (car statement))
                 (not (null? (cdr statement))))
-                (printf ";; is print ~n")
+ ;              (printf ";; is print ~n")
                 (do-print (cdr statement))  ) 
           ;; If car reads 'let' check that two args present
           (( and (eq? 'let (car statement))
                 (not (null? (cdr statement))))
-                (printf ";; is let~n")
+ ;              (printf ";; is let~n")
                 (do-let (cdr statement))  )
           (( and (eq? 'dim (car statement))
                 (list? (cdr statement)))
@@ -194,26 +194,14 @@
                 (parse-line program (label-get (cadr statement)))
           )
     )
-    (printf ";; parse-statement: leaving~n")
+ ;  (printf ";; parse-statement: leaving~n")
 )
 
 ;; Recursively prints each statement.
 ;; If it's a string just print that. If it's an expression, evaluate 
 ;; then print. It's otherwise assumed to be a variable.
-;(define (do-print printable) 
-;    (if  (string? (car printable))
-;         ;   (real? (car printable))  )
- ;        (display (car printable ) )  
-;    ;else
-;        (display (parse-expr (car printable) )))
-;    ;if there are still more printables, print those too
-;    (when (not (null? (cdr printable)))
-;          (do-print (cdr printable) ))
-;    (newline)
-;) 
-
 (define (do-print printable)
-    (printf ";; do-print: ~s~n" printable)
+ ;  (printf ";; do-print: ~s~n" printable)
     (cond ( (string? (car printable))
             (display (car printable ) ) )
           ( (and  (list? (car printable)) 
@@ -236,48 +224,50 @@
 
 ;; initiates array, puts in var table
 (define (do-dim arr)
-   (printf ";; do-dim: ~s~n" arr )
-   ;; makes a vector with the goven car as key, the array itself as 
+ ;  (printf ";; do-dim: ~s~n" arr )
+   ;; makes a vector with the given car as key, the array itself as 
    ;; the vector. 
    (var-put! 
       (car arr) (make-vector (exact-round (parse-expr (cadr arr)))))
-   (printf ";; do-dim: put in var as ~s:~s ~n" (car arr)(var-get (car arr)) )    
+ ; (printf ";; do-dim: put in var as ~s:~s ~n" (car arr)(var-get (car arr)) )    
 )
 
 ;; Evaluate let expresson and push value to variable table
 (define (do-let var)
-    ;(display (list? (car var)))(newline)
-    (printf ";; do-let: ~s~n" var)
+   ;(display (list? (car var)))(newline)
+ ;  (printf ";; do-let: ~s~n" var)
     (if (list? (car var) )
-        ( begin (printf ";; is let of array~n")
+     ;  ( begin (printf ";; is let of array~n")
         (vector-set! 
            (var-get (caar var)) 
            (exact-round (parse-expr (cadar var))) 
-           (cadr var) ) 
-        (printf "do-let: var-put as ~s[~s]:~s ~n"
-           (caar var) 
-           (exact-round (parse-expr (cadar var)))
-           (vector-ref  
-             (var-get (caar var)) (exact-round (parse-expr (cadar var))))
-           )
+           (cadr var) 
+ ;) 
+ ;       (printf "do-let: var-put as ~s[~s]:~s ~n"
+ ;          (caar var) 
+ ;          (exact-round (parse-expr (cadar var)))
+ ;          (vector-ref  
+ ;            (var-get (caar var)) (exact-round (parse-expr (cadar var))))
+ ;          )
         )  
         ;else
-        ( begin (printf ";; is not array~n")
+   ;     ( begin (printf ";; is not array~n")
           (var-put! (car var) (parse-expr (cadr var))) 
-          (printf ";; var-put as ~s:~s~n" (car var)(var-get (car var))) 
-        )
+ ;         (printf ";; var-put as ~s:~s~n" (car var)(var-get (car var))) 
+    ;    )
     )
-    (printf ";; do-let: leaving ~n")
+ ;   (printf ";; do-let: leaving ~n")
 )
 
 ;; Recursively analyze expressions
 (define (parse-expr expr)
-    (printf ";; parse-expr: ~s~n" expr)
+ ;   (printf ";; parse-expr: ~s~n" expr)
     (if (symbol? expr)
         ;then
         (if (hash-has-key? *variable-table* expr)
             (hash-ref *variable-table* expr)
-            (printf ";; ~s is in var table as ~s~n" expr (var-get expr) )
+            (void)
+  ;         (printf ";; ~s is in var table as ~s~n" expr (var-get expr) )
         ) 
         ;else
         ;add 0.0 to the number to ensure it is a real number
