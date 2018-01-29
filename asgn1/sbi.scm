@@ -41,6 +41,7 @@
 		(/       ,(lambda (x y) (floor (/ (+ x 0.0) (+ y 0.0)))))
 		(%       ,(lambda (x y) (- x (* (/ x y) y))))
 		(>       ,>)
+                (<       ,<)
 		(=       ,(lambda (x y) (eqv? x y)))
 		(<=      ,(lambda (x y) (<=   x y)))
 		(>=      ,(lambda (x y) (>=   x y)))
@@ -70,13 +71,6 @@
 	)
 )
 
-;(for-each
-;	(lambda (pair)
-;		(var-put! (car pair) (cadr pair)))
-;	`(
-;		(e      ,2.718281828459045235360287471352662497757247093)
-;	      (pi     ,3.141592653589793238462643383279502884197169399)	)
-;)
 
 ; Label table holds string labels for those lines where they appear
 ; Key is the label, Value is the line number to which the label refers
@@ -193,8 +187,28 @@
           ((eq? 'goto (car statement))
                 (parse-line program (label-get (cadr statement)))
           )
+    
+    )
+    (when (eq? 'if (car statement))
+    ;    (printf ";; is do ~n")
+         (do-if program (cdr statement ))
     )
  ;  (printf ";; parse-statement: leaving~n")
+)
+
+;; Do if. JUST DO IF
+(define (do-if program comp)
+    (printf "")
+    ;(printf ";;DO-IF: ~s~n" comp)
+    ;(printf ";;do-if: ~s~s~s~n" (var-get (caar comp)) 
+    ;                          (parse-expr (cadar comp))
+    ;                          (parse-expr (caddar comp))
+    ;                                             )
+    ;(if (and (var-get (caar comp)) 
+    ;      (parse-expr (cadar comp))   
+    ;      (parse-expr (caddar comp)) true)
+    ;    (parse-line program (label-get (cadr statement)))
+    ;    (void))
 )
 
 ;; Recursively prints each statement.
