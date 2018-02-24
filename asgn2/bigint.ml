@@ -46,6 +46,14 @@ module Bigint = struct
                        ((if sign = Pos then "" else "-") ::
                         (map string_of_int reversed))
    
+    let rec trim list = match list with
+        | []        -> []
+        | [0]       -> []
+        | car::cdr  ->
+            let cdr' = trim cdr
+            in match car, cdr' with
+                | 0, []     -> []
+                | car, cdr' -> car::cdr'
     
     let rec comp list1 list2 =
         if (List.length list1) > (List.length list2)
@@ -72,6 +80,16 @@ module Bigint = struct
           let sum = car1 + car2 + carry
           in  sum mod radix :: add' cdr1 cdr2 (sum / radix)
 
+    let rec sub' list1 list2 carry = match (list1, list2, carry) with
+        | [], _, _           -> []
+        | list1, [], 0       -> list1
+        | list1, [], carry   -> trim (sub' list1 [carry] 0)
+        | car1::cdr1, car2::cdr2, carry ->
+            let dif = car1 - (car2 + carry)
+            in if dif < 0
+                then dif + radix :: trim (sub' cdr1 cdr2 1)
+                else dif :: trim (sub' cdr1 cdr2 0)
+
     let add (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
         if neg1 = neg2
         then Bigint (neg1, add' value1 value2 0)
@@ -80,34 +98,88 @@ module Bigint = struct
             else if 0 > max then Bigint (neg2, (sub' value2 value1 0))  
             else zero
 
-    (* Subtraction helper function. value1 is higher in magnitude *)
-    let rec sub' list1 list2 carry = match (list1, list2, carry) with
-        | list1, [], 0       -> list1
-        | list1, [], carry   -> sub' list1 [carry] 0
-        | car1::cdr1, car2::cdr2, carry ->
-            let dif = car1 - (car2 + carry)
-            in if dif < 0
-                then car1 + radix - car2 - carry :: sub' cdr1 cdr2 1
-            else car1 - car2 - carry :: sub' cdr1 cdr2 0
-
     let sub (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
-        if neg1 = neg2 then 
-            let max = comp value1 value2 in
-                printf "comp: %c \n" max
-                if max > 0 
-                    then Bigint (neg1, (sub' value1 value2 0))
-                else if 0 > max 
-                    then Bigint (neg1, (sub' value2 value1 0))
-                else zero
+        if neg1 = neg2 
+        then let a = comp value1 value2 in
+            if a > 0 then Bigint (Pos, (sub' value1 value2 0))
+            else if 0 > a then Bigint (Neg, (sub' value2 value1 0))
+            else zero
+        (* need to put sign-checking here *)
         else Bigint (neg1, add' value1 value2 0) 
 
-    let mul = add
+(*
+    let rec mul' list1 list2 sum = match (list1, list2, sum) with
+        | [], [], _          -> []
+        | [], _, _          -> []
+        | _, [], _          -> []
+        | _, [1], _         -> add' list1 sum 0
+        | list1, list2, _  -> 
+            (*let a = comp list2 [1]
+            in if a = 0 then (add' list1 sum 0)*)
+            mul' list1 (sub' list2 [] 1) (add' sum list1 0)
 
-    let div = add
+    let mul (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
+        if neg1 = neg2 then Bigint (Pos, mul' value1 value2 [] )
+        else Bigint (Neg, mul' value1 value2 [0] )
+*)
+    let rec mul' list1 pow2 list2 =
+    if (comp pow2 list1) > 0
+    then list1, []
+    else let rem, prod =
+           mul' list1 (add' pow2 pow2 0) (add' list2 list2 0)
+         in if (comp rem pow2) < 0
+             then rem, prod
+             else (sub' rem pow2 0), (add' prod list2 0)
 
-    let rem = add
+    let mul (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
+        if neg1 = neg2 
+        then let _, prod = mul' value1 [1] value2 in Bigint(Pos, prod)
+        else let _, prod = mul' value1 [1] value2 in Bigint(Neg, prod)
+
+    let rec divrem' list1 pow2 list2 =
+        if (comp list2 list1) > 0
+        then [], list1
+        else let quot, rem =
+               divrem' list1 (add' pow2 pow2 0) (add' list2 list2 0)
+            in if (comp list2 rem) > 0
+               then quot, rem
+               else (add' quot  pow2 0), (sub' rem list2 0)
+
+    let divrem list1 list2 = divrem' list1 [1] list2
+
+    let div (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
+        if neg1 = neg2
+        then let quot, _ = divrem value1 value2 in Bigint(Pos, quot)
+        else let quot, _ = divrem value1 value2 in Bigint(Neg, quot)
+
+    let rem (Bigint (neg1, value1)) (Bigint (neg2, value2))=
+        if neg1 = neg2
+        then let _, rem = divrem value1 value2 in Bigint(Pos, rem)
+        else let _, rem = divrem value1 value2 in Bigint(Neg, rem)
 
     let pow = add
+
+    (*
+    let div2 list1 = div (Bigint (Pos, value1)) (Bigint (neg2, value2)) 
+
+    let rec pow' (Bigint(Neg1, list1) (Bigint (Neg2, list2) 
+                result = match list2 with
+        | []          -> result  
+        | list2 
+          when (comp (div (Bigint (Pos, list2)) (Bigint (Pos, [2]))) 
+                []) = 0
+          -> pow' (mul' list1 [1] list2) 
+                  (div (Bigint (Pos, list2)) (Bigint (Pos, [2])))
+                  result
+        | list2 -> pow' list1 (sub' list2 [] 1) (mul' list1 result)  
+
+    let pow (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
+        if neg2 = Neg 
+            then pow' (div (Bigint(Pos, [1])) (Bigint(neg1, list1))) 
+                      (Bigint (Pos, list2)) (Bigint(Pos, [1]))
+            else pow' (Bigint (Pos, list1)) (Bigint (Pos, list2))
+                      (Bigint(Pos, [1]))
+     *)
 
 end
 

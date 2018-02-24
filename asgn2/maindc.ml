@@ -11,18 +11,59 @@ type stack_t = Bigint.bigint Stack.t
 let push = Stack.push
 let pop = Stack.pop
 
+let aget = Array.get
+let aset = Array.set
+let amake = Array.make
+
+type command = Load of char | Store of char * Bigint.bigint
+
+let symbol_table = amake 256 (false, Bigint.zero)
+
 let ord thechar = int_of_char thechar
 type binop_t = bigint -> bigint -> bigint
 
-let print_number number = printf "%s\n%!" (string_of_bigint number)
+let aget = Array.get
+let aset = Array.set
+let amake = Array.make
 
-let print_stackempty () = printf "stack empty\n%!"
+(*
+let do_command = function
+    | Load sym -> (
+         let entry = aget symbol_table (ord sym)
+         in match entry with
+            | false, _ -> printf "register '%c' is empty\n%!" sym
+            | true, value ->  push value stack_t
+      )
+    | Store (sym, value) -> (
+         aset symbol_table (ord sym) (true, value);
+         printf "%c := %g\n%!" sym value
+      )
+*)
+
+let rec print_number number = 
+   let s = string_of_bigint number in
+   if (String.length s) < 70 
+       then printf "%s\n%!" s
+   else
+       (printf "%s\\\n%!" (String.sub s 0 69);
+       print_number (bigint_of_string (String.sub s 69 
+                                          ((String.length s) - 69))) )
+
+let print_stackempty () = printf "dc: stack empty\n%!"
 
 let executereg (thestack: stack_t) (oper: char) (reg: int) =
     try match oper with
-        | 'l' -> printf "operator l reg 0%o is unimplemented\n%!" reg
-        | 's' -> printf "operator s reg 0%o is unimplemented\n%!" reg
-        | _   -> printf "0%o 0%o is unimplemented\n%!" (ord oper) reg
+        | 'l' -> (
+            let entry = aget symbol_table reg
+            in match entry with
+            | false, _ -> printf "register '%c' is empty\n%!" 
+                           (char_of_int reg)
+            | true, value -> push value thestack
+        )
+        | 's' -> 
+            aset symbol_table reg (true,  (pop thestack));
+        | _   -> printf "%c %c is unimplemented\n%!" 
+                oper (char_of_int reg)
     with Stack.Empty -> print_stackempty()
 
 let executebinop (thestack: stack_t) (oper: binop_t) =
@@ -63,7 +104,7 @@ let toploop (thestack: stack_t) inputchannel =
                  | Operator oper       -> execute thestack oper
                  );
              toploop ()
-        with End_of_file -> printf "End_of_file\n%!";
+        with End_of_file -> printf "";
     in  toploop ()
 
 let readfiles () =
