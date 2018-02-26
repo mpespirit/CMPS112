@@ -2,6 +2,8 @@
 "$Id: bitstream.st,v 1.6 2016-10-13 13:08:26-07 - - $"
 execname := '$RCSfile: bitstream.st,v $' =~ '.*: (.*),v.*' at: 1.
 
+nl := Character nl.
+
 Character extend [
    isGraph [
       ^ (Character space < self) & (self <= $~)
@@ -99,7 +101,6 @@ Object subclass: Leaf [
 
 ]
 
-
 Leaf subclass: Tree [
    |left right|
 
@@ -162,8 +163,6 @@ stdout << nl << 'Before remove loop.' << nl.
 "TEST: tree.st"
 
 "Count frequency of input characters"
-
-nl := Character nl.
 
 Character extend [
    isPrint [
@@ -234,17 +233,90 @@ freqtable keysAndValuesDo: [:key :value |
    ]
 ].
 "
+
 "TEST: echo aaaaaaaaaa bbbbb ccc | charfreq.st"
 
 Smalltalk arguments: '-c -t -d'
 do: [:opt :arg | 
+    "Compress File"
     (opt = $c) ifTrue: [
-         
+        |infile outfile table sortcol|
+        '-c command' displayNl.
+        "Parse command line files"
+        filename  := Smalltalk getArgv: 2.
+        outname := Smalltalk getArgv: 3.
+
+        "No file specified, print to standard out"
+        (outname isNil) ifTrue: [outname := stdout].
+
+        inFile  := FileStream open: filename mode: FileStream read.
+        "outFile := FileStream open: outname."
+        
+        Transcript show: 'iterating through file'.
+        Transcript cr. 
+
+        "Count frequency by iterating through file"
+        table := ZeroArray new: 257.
+        [inFile atEnd not] whileTrue: [
+            |charIn|
+            charIn := inFile next asInteger.
+            table incr: charIn.
+        ].
+        table at: 256 put: 1. "EOF character" 
+
+        "Generate leaf nodes for non-zero values"
+        sortcol := SortedCollection new.
+        table keysAndValuesDo: [:key :value | 
+            |node|  
+            (value notNil and: [value > 0]) ifTrue: [
+                node := Leaf new: (key asCharacter) count: value.
+                sortcol add: node. 
+            ]
+        ].        
+        "Build tree based on frequency"
+        [sortcol size > 1] whileTrue: [
+            |first second tChar tCount|
+            first  := sortcol removeFirst.
+            second := sortcol removeFirst.
+            tChar  := first char.
+            tCount := first count + second count + 1.
+            sortcol add: 
+                (Tree new: tChar count: tCount left: first right: second).
+        ].
+
+        Transcript show: 'built tree'. 
+        Transcript cr.
+
+        "Place tree into encoded table" 
+        tree := sortcol first.
+        encoded := ZeroArray new: 257.
+        tree inorder: [:char :string |
+            index := char asInteger.
+            encoded at: index put: string.
+        ] prefix: ' '.
+
+        outBits := BitStream new: outFile.
+
+        Transcript show: 'encoding tree'.
+        Transcript cr.
+
+        "Encoding stuff here"
+
+        Transcript show: 'exiting'.
+        Transcript cr. 
+"
+        inFile close.
+        outFile close.        
+"
     ].
+
+    "Print Tree"
     (opt = $t) ifTrue: [
         
     ].
-    (opt = $d) ifTrue: [
+
+    "Uncompress File"
+    (opt = $u) ifTrue: [
         
     ].
 ]
