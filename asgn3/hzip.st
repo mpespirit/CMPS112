@@ -272,7 +272,18 @@ do: [:opt :arg |
                 node := Leaf new: (key asCharacter) count: value.
                 sortcol add: node. 
             ]
-        ].        
+        ].
+ 
+        " ------DEBUG---------  
+          Print Sorted Collection: Expand to make -t opt"     
+        "sortcol keysAndValuesDo: [:key :value | 
+           |bits keyChar|
+           bits := key printString: 2.
+           keyChar := key asCharacter.
+           stdout << keyChar << ' ' << (value count) << ' ' 
+                  << bits << nl.
+        ]."        
+
         "Build tree based on frequency"
         [sortcol size > 1] whileTrue: [
             |first second tChar tCount|
@@ -291,9 +302,19 @@ do: [:opt :arg |
         tree := sortcol first.
         encoded := ZeroArray new: 257.
         tree inorder: [:char :string |
-            index := char asInteger.
-            encoded at: index put: string.
+            "index := char asInteger."
+            encoded at: char asInteger put: string.
         ] prefix: ' '.
+
+        "Check encoded table's stuff
+         This can be extended into being full -t option"
+        encoded keysAndValuesDo: [:key :value | 
+           |bits count|
+           count := table at: key.
+           keyChar := key asCharacter.
+           stdout << keyChar << ' ' << count << ' ' 
+                  << value << nl.
+        ].
 
         outBits := BitStream new: outFile.
 
