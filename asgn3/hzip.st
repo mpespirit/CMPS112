@@ -15,51 +15,45 @@ Character extend [
 ]
 
 Object subclass: BitStream [
-   |bitIndex byte myStream|
+   |bitIndex currentByte myStream|
+   BitStream class >> new [
+      self shouldNotImplement.
+   ]
    BitStream class >> new: fileStream [
       |result|
       result := super new.
       result init: fileStream.
       ^result
    ]
+   clearByte [
+      bitIndex := 8.
+      currentByte := 0.
+   ]
    init: fileStream [
       myStream := fileStream.
-      bitIndex := 1.
+      self clearByte.
    ]
-   nextBit [
-      bitIndex = 1 ifTrue: [
-         byte := myStream next.
-         bitIndex := 9.
-      ].
+   flushByte [
+      bitIndex = 8 ifFalse: [
+         myStream nextPutByte: currentByte.
+         self clearByte.
+      ]
+   ]
+   writeBit: bit [ 
+      Transcript show: 'here'. Transcript cr.
+      currentByte := currentByte bitAt: bitIndex put: bit.
       bitIndex := bitIndex - 1.
-      ^byte value bitAt: bitIndex
+      bitIndex = 0 ifTrue: [self flushByte].
    ]
-   atEnd [
-      ^bitIndex = 1 and: [myStream atEnd]
-   ]
-   currByte [
-      ^byte
-   ]
+
+   writeString: string [
+      string do: [:index |
+          index asString = '0'
+             ifTrue: [self writeBit: 0]
+             ifFalse: [self writeBit: 1].
+      ].
+   ] 
 ]
-
-"
-nl := Character nl.
-stdinBits := BitStream new: stdin.
-count := 0.
-[stdinBits atEnd] whileFalse: [
-   stdout << stdinBits nextBit.
-   count := count + 1.
-   count = 4 ifTrue: [stdout << ' '].
-   count = 8 ifTrue: [
-      stdout << ' ' << stdinBits currByte visible << nl.
-      count := 0
-   ].
-]
-"
-
-"TEST: echo hello world | ./bitstream.st 2>&1"
-
-nl := Character nl.
 
 Object subclass: Leaf [
    |char count|
@@ -99,6 +93,20 @@ Object subclass: Leaf [
       visitor value: char value: string.
    ]
 
+   binTreeDump: myStream [
+      |num|
+      myStream writeBit: 0.
+      num := char asciiValue.
+      8 to: 1 by: -1 do: [:index |
+           |current|
+           current := num bitAt: index.
+           myStream writeBit: current.
+      ].
+      "Placeholder for EOF char"
+      num = 256 ifTrue: [ 
+          myStream writeBit: 1.
+      ].
+   ]
 ]
 
 Leaf subclass: Tree [
@@ -129,41 +137,17 @@ Leaf subclass: Tree [
       right inorder: visitor prefix: string, '1'.
    ]
 
+   left [^ left]
+   right [^ right]
+
+   binTreeDump: myStream [
+      left binTreeDump: myStream.
+      right binTreeDump: myStream.
+      myStream writeBit: 1.
+   ]
 ]
-
-"
-a := Leaf new: $a count: 10.
-b := Leaf new: $b count: 20.
-c := Leaf new: $c count: 15.
-t := Tree new: $t count: 30 left: a right: b.
-u := Tree new: $u count: 50 left: t right: c.
-x := Leaf new: $x count: 20.
-z := Tree new: $z count: 80 left: u right: x.
-
-sortcol := SortedCollection new.
-sortcol add: t; add: u; add: a; add: b; add: x; add: z; inspect.
-
-stdout << nl << 'Before vising z Tree' << nl.
-z inorder: [:char :string |
-   stdout << '[' << char << ']=' << string << nl.
-] prefix: ''.
-
-stdout << nl << 'Before sortcol do: loop' << nl.
-sortcol do: [:item |
-   stdout << item << nl.
-].
-
-stdout << nl << 'Before remove loop.' << nl.
-[sortcol notEmpty] whileTrue: [
-   |first|
-   first := sortcol removeFirst.
-   stdout << first << nl.
-]
-"
-"TEST: tree.st"
 
 "Count frequency of input characters"
-
 Character extend [
    isPrint [
       ^ (Character space <= self) & (self <= $~)
@@ -218,25 +202,7 @@ Object subclass: ZeroArray [
 
 ]
 
-"freqtable := ZeroArray new: 256.
-
-[stdin atEnd not] whileTrue: [
-   |ordChar|
-   ordChar := stdin next asInteger.
-   freqtable incr: ordChar.
-].
-
-freqtable keysAndValuesDo: [:key :value |
-   (value notNil and: [value > 0]) ifTrue: [
-      stdout << 'freq[' << key asCharacter visible << ']=' << value
-             << nl.
-   ]
-].
-"
-
-"TEST: echo aaaaaaaaaa bbbbb ccc | charfreq.st"
-
-Smalltalk arguments: '-c -t -d'
+Smalltalk arguments: '-c -t -d -u'
 do: [:opt :arg | 
     "Compress File"
     (opt = $c) | (opt = $t) ifTrue: [
@@ -302,74 +268,78 @@ do: [:opt :arg |
         tree := sortcol first.
         encoded := ZeroArray new: 257.
         tree inorder: [:char :string |
-            "index := char asInteger."
-            encoded at: char asInteger put: string.
+            index := char asInteger.
+            encoded at: index put: string.
         ] prefix: ' '.
+        
+        Transcript show: 'option to print tree'.
+        Transcript cr.
 
         (opt = $t) ifTrue: [
-        "Check encoded table's stuff
-         This can be extended into being full -t option"
-        encoded keysAndValuesDo: [:key :value | 
-            |bits count lt127 gt32 empty|
-            count := table at: key.
-            "The number of digits in count will determine the
-             spacing between columns"
-            i := count printString size. 
-            lt127 := key < 127.
-            gt32 := key > 32.
-            empty := count isNil. 
-            (key == 256) ifTrue: [
-                stdout << 'EOF      ' << ' ' << count << ' '
-                << value << nl.
-            ] ifFalse: [
-                (gt32 & lt127 & empty not) ifTrue: [
-                    keyChar := key asCharacter.
-                    stdout << ' ' << keyChar. 
-                    1 to: (9-i) do: [ :x |
-                        stdout << ' '. 
+            "Check encoded table's stuff
+            This can be extended into being full -t option"
+            encoded keysAndValuesDo: [:key :value | 
+                |bits count lt127 gt32 empty|
+                count := table at: key.
+                "The number of digits in count will determine the
+                spacing between columns"
+                i := count printString size. 
+                lt127 := key < 127.
+                gt32 := key > 32.
+                empty := count isNil. 
+                (key == 256) ifTrue: [
+                    stdout << 'EOF      ' << ' ' << count << ' '
+                    << value << nl.
+                ] ifFalse: [
+                    (gt32 & lt127 & empty not) ifTrue: [
+                        keyChar := key asCharacter.
+                        stdout << ' ' << keyChar. 
+                        1 to: (9-i) do: [ :x |
+                            stdout << ' '. 
+                        ]. 
+                        stdout << count << ' ' << value << nl.
                     ]. 
-                    stdout << count << ' ' << value << nl.
-                ]. 
-                ( gt32 not | lt127 not & empty not ) ifTrue: [
-                    key1 := ((key asInteger printStringRadix: 16) copyFrom: 4).
-                    stdout << 'x' << key1.
-                    (key1 size == 1) ifTrue: [
-                        stdout << '0'.
+                    ( gt32 not | lt127 not & empty not ) ifTrue: [
+                        key1 := ((key asInteger printStringRadix: 16) copyFrom: 4).
+                        stdout << 'x' << key1.
+                        (key1 size == 1) ifTrue: [
+                            stdout << '0'.
+                        ].
+                        "((key asInteger printStringRadix: 16) copyFrom: 4)." 
+                        1 to: (8-i) do: [ :x |
+                            stdout << ' '. 
+                        ].                    
+                        stdout << count << ' ' << value << nl.
                     ].
-                    "((key asInteger printStringRadix: 16) copyFrom: 4)." 
-                    1 to: (8-i) do: [ :x |
-                        stdout << ' '. 
-                    ].                    
-                    stdout << count << ' ' << value << nl.
                 ].
             ].
         ].
-      
-        ].
 
-        outBits := BitStream new: outFile.
+        outBits := BitStream new: outFile. 
+        tree binTreeDump: outBits. 
 
-        Transcript show: 'encoding tree'.
+        Transcript show: 'passed dump'. Transcript cr. 
+        outBits writeBit: 1.
+
+        Transcript show: 'compressing'.
         Transcript cr.
 
-        "Encoding stuff here"
+        inFile reset. 
+        [inFile atEnd not] whileTrue: [
+            |ordChar|
+            ordChar := inFile next asInteger.
+            str := encoded at: ordChar.
+            outBits writeString: str.
+        ].
 
         Transcript show: 'exiting'.
         Transcript cr. 
-"
+
+        eof := encoded at: 256.
+        outBits writeString: eof.
+        outBits clear. 
         inFile close.
         outFile close.        
-"
-    ].
-
-    "Print Tree"
-    (opt = $t) ifTrue: [
-        
-    ].
-
-    "Uncompress File"
-    (opt = $u) ifTrue: [
-        
     ].
 ]
 ifError: [
