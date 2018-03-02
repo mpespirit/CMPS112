@@ -239,7 +239,7 @@ freqtable keysAndValuesDo: [:key :value |
 Smalltalk arguments: '-c -t -d'
 do: [:opt :arg | 
     "Compress File"
-    (opt = $c) ifTrue: [
+    (opt = $c) | (opt = $t) ifTrue: [
         |infile outfile table sortcol|
         '-c command' displayNl.
         "Parse command line files"
@@ -267,9 +267,9 @@ do: [:opt :arg |
         "Generate leaf nodes for non-zero values"
         sortcol := SortedCollection new.
         table keysAndValuesDo: [:key :value | 
-            |node|  
+            |node|
             (value notNil and: [value > 0]) ifTrue: [
-                node := Leaf new: (key asCharacter) count: value.
+                node := Leaf new: (key asCharacter) count: value.  
                 sortcol add: node. 
             ]
         ].
@@ -292,7 +292,7 @@ do: [:opt :arg |
             tChar  := first char.
             tCount := first count + second count + 1.
             sortcol add: 
-                (Tree new: tChar count: tCount left: first right: second).
+             (Tree new: tChar count: tCount left: first right: second).
         ].
 
         Transcript show: 'built tree'. 
@@ -306,14 +306,45 @@ do: [:opt :arg |
             encoded at: char asInteger put: string.
         ] prefix: ' '.
 
+        (opt = $t) ifTrue: [
         "Check encoded table's stuff
          This can be extended into being full -t option"
         encoded keysAndValuesDo: [:key :value | 
-           |bits count|
-           count := table at: key.
-           keyChar := key asCharacter.
-           stdout << keyChar << ' ' << count << ' ' 
-                  << value << nl.
+            |bits count lt127 gt32 empty|
+            count := table at: key.
+            "The number of digits in count will determine the
+             spacing between columns"
+            i := count printString size. 
+            lt127 := key < 127.
+            gt32 := key > 32.
+            empty := count isNil. 
+            (key == 256) ifTrue: [
+                stdout << 'EOF      ' << ' ' << count << ' '
+                << value << nl.
+            ] ifFalse: [
+                (gt32 & lt127 & empty not) ifTrue: [
+                    keyChar := key asCharacter.
+                    stdout << ' ' << keyChar. 
+                    1 to: (9-i) do: [ :x |
+                        stdout << ' '. 
+                    ]. 
+                    stdout << count << ' ' << value << nl.
+                ]. 
+                ( gt32 not | lt127 not & empty not ) ifTrue: [
+                    key1 := ((key asInteger printStringRadix: 16) copyFrom: 4).
+                    stdout << 'x' << key1.
+                    (key1 size == 1) ifTrue: [
+                        stdout << '0'.
+                    ].
+                    "((key asInteger printStringRadix: 16) copyFrom: 4)." 
+                    1 to: (8-i) do: [ :x |
+                        stdout << ' '. 
+                    ].                    
+                    stdout << count << ' ' << value << nl.
+                ].
+            ].
+        ].
+      
         ].
 
         outBits := BitStream new: outFile.
