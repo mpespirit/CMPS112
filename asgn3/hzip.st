@@ -314,7 +314,7 @@ do: [:opt :arg |
                 ].
             ].
         ].
-
+        (opt = $c) ifTrue: [
         outBits := BitStream new: outFile. 
         tree binTreeDump: outBits. 
 
@@ -339,7 +339,8 @@ do: [:opt :arg |
         outBits writeString: eof.
         outBits clear. 
         inFile close.
-        outFile close.        
+        outFile close.      
+        ].  
     ].
 ]
 ifError: [
