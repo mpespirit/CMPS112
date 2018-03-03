@@ -311,11 +311,10 @@ do: [:opt :arg |
             tree binTreeDump: outBits. 
             outBits writeBit: 1.
 
-            inFile reset. 
+            inFile reset.
+ 
             [inFile atEnd not] whileTrue: [
-                |ordChar|
-                ordChar := inFile next asInteger.
-                str := encoded at: ordChar.
+                str := encoded at: inFile next asInteger.
                 outBits writeString: str.
             ].
 
@@ -342,27 +341,26 @@ do: [:opt :arg |
         (opt = $d) ifTrue: [outFile << nl << 'begin' << nl].
 
         "Helper variabes"
-        byte := 0.
-        singleTree := false.
         stack := OrderedCollection new.
-
+        singleTree := false.
+        aByte := 0.
         "Read input file and reconstruct bits" 
         [(singleTree not) & (inFile atBitEnd not)] whileTrue: [
-            |bit|
-            bit := inFile nextBit. 
-            bit = 0 ifTrue: [ "Reconstruct byte" 
-                byte := 0.
+            |aBit|
+            aBit := inFile nextBit. 
+            aBit = 0 ifTrue: [ "Reconstruct byte" 
+                aByte := 0.
                 8 to: 1 by: -1 do: [:index |
-                   bit := inFile nextBit.
-                   byte := byte bitAt: index put: bit. 
+                   aBit := inFile nextBit.
+                   aByte := aByte bitAt: index put: aBit. 
                 ].
-                byte = 0 ifTrue: [
-                   bit := inFile nextBit.
-                   bit = 1 ifTrue: [
-                       byte := byte + 256.
+                aByte = 0 ifTrue: [
+                   aBit := inFile nextBit.
+                   aBit = 1 ifTrue: [
+                       aByte := aByte + 256.
                    ].
                 ].
-                node := Leaf new: byte asCharacter count: 1. 
+                node := Leaf new: aByte asCharacter count: 1. 
                 stack addFirst: node.                 
             ] ifFalse: [ "Else pop subtrees from stack" 
                 stack size = 1 ifTrue: [
@@ -385,8 +383,8 @@ do: [:opt :arg |
 
         "Loop over rest of input file"  
         [(eof not) & (inFile atBitEnd not)] whileTrue: [
-            |bit|
-            bit := inFile nextBit. 
+            |aBit|
+            aBit := inFile nextBit. 
             
             "Traverse tree for children"
             node isLeaf ifTrue: [
@@ -399,7 +397,7 @@ do: [:opt :arg |
                 (opt = $d) ifTrue: [outFile << 'traversing tree' << nl].
 
                 "Write byte to file and reset pointer"
-                bit = 0 ifTrue: [ "0-Link"
+                aBit = 0 ifTrue: [ "0-Link"
                     node := node left.
                 ] ifFalse: [ "1-Link"
                     node := node right. 
