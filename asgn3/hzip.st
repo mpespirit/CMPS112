@@ -262,8 +262,11 @@ FileStream extend [
 Smalltalk arguments: '-c -t -d -u'
 do: [:opt :arg | 
     "Compress File"
+    inName := Smalltalk getArgv: 2. 
+    outName := Smalltalk getArgv: 3.
+    (outName isNil) ifTrue: [outname:= stdout].
+
     ((opt = $c) | (opt = $t)) ifTrue: [
-        inName := Smalltalk getArgv: 2.
         inFile := FileStream open: inName mode: FileStream read. 
 
         "Count frequency by iterating through file"
@@ -351,8 +354,6 @@ do: [:opt :arg |
         (opt = $c) ifTrue: [
             '-c command' displayNl.
             "If no file specified, print to stdout" 
-            outName := Smalltalk getArgv: 3.
-            outName isNil ifTrue: [outname := stdout]. 
             outFile := FileStream open: outName.
 
             root := sortcol removeFirst.
@@ -377,15 +378,11 @@ do: [:opt :arg |
     ]. "End opt c/t"
 
     (opt = $u) ifTrue: [
-        inName := Smalltalk getArgv: 2.
-        inFile := FileStream open: inName mode: FileStream read.      
+        '-u command' displayNl.
 
-        outName := Smalltalk getArgv: 3.
-        (outName isNil) ifTrue: [
-            outFile := stdout.
-        ] ifFalse: [
-            outFile := FileStream open: outName.
-        ]
+        inFile := FileStream open: inName mode: FileStream read.      
+        outFile := FileStream open: outName.
+
         outFile << 'farts' << nl.
 
         "Helper variabes"
