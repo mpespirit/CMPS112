@@ -39,9 +39,11 @@ Object subclass: OutBits [
 
    writeString: string [
       string do: [:index |
-          index asString = '0'
-             ifTrue: [self writeBit: 0]
-             ifFalse: [self writeBit: 1].
+          index asString = '0' ifTrue: [
+              self writeBit: 0
+          ] ifFalse: [
+              self writeBit: 1
+          ].
       ].
    ] 
 ]
@@ -86,21 +88,18 @@ Object subclass: Leaf [
    "Helper functions"
    isLeaf [^ true]
 
-   binTreeDump: aStream [
-      |num|
-      aStream writeBit: 0.
-      num := self char asInteger.
+   binTreeDump: myStream [
+      |ascii|
+      myStream writeBit: 0.
+      ascii := char asciiValue.
       8 to: 1 by: -1 do: [:index |
            |current|
-           current := num bitAt: index.
-           aStream writeBit: (num bitAt: index).
-      ].
-      num = 0 ifTrue: [
-          aStream writeBit: 0.
+           current := ascii bitAt: index.
+           myStream writeBit: current.
       ].
       "Placeholder for EOF char"
-      num = 256 ifTrue: [ 
-          aStream writeBit: 1.
+      ascii = 256 ifTrue: [ 
+          myStream writeBit: 1.
       ].
    ]
 ]
@@ -136,10 +135,10 @@ Leaf subclass: Tree [
    left [^ left]
    right [^ right]
 
-   binTreeDump: aStream [
-      left binTreeDump: aStream.
-      right binTreeDump: aStream.
-      aStream writeBit: 1.
+   binTreeDump: myStream [
+      left binTreeDump: myStream.
+      right binTreeDump: myStream.
+      myStream writeBit: 1.
    ]
 ]
 
@@ -219,9 +218,9 @@ do: [:opt :arg |
         "Count frequency by iterating through file"
         table := ZeroArray new: 257.
         [inFile atEnd not] whileTrue: [
-            |charIn|
-            charIn := inFile next asInteger.
-            table incr: charIn.
+            |ordChar|
+            ordChar := inFile next asInteger.
+            table incr: ordChar.
         ].
         table at: 256 put: 1. "EOF character" 
 
@@ -230,7 +229,7 @@ do: [:opt :arg |
         table keysAndValuesDo: [:key :value | 
             |node|
             (value notNil and: [value > 0]) ifTrue: [
-                node := Leaf new: (key asCharacter) count: value.  
+                node := Leaf new: key asCharacter count: value.  
                 sortcol add: node. 
             ]
         ].
@@ -252,7 +251,7 @@ do: [:opt :arg |
         tree inorder: [:char :string |
             index := char asInteger.
             encoded at: index put: string.
-        ] prefix: ' '.
+        ] prefix: ''.
         
         (opt = $t) ifTrue: [
             (opt = $d) ifTrue: ['-t command' displayNl].
@@ -323,6 +322,7 @@ do: [:opt :arg |
             eof := encoded at: 256.
             outBits writeString: eof.
             outBits flushByte.
+
             inFile close.
             outFile close.      
         ]. "End opt c" 
@@ -386,7 +386,7 @@ do: [:opt :arg |
         "Loop over rest of input file"  
         [(eof not) & (inFile atBitEnd not)] whileTrue: [
             |bit|
-            bit := inFile nextBit.
+            bit := inFile nextBit. 
             
             "Traverse tree for children"
             node isLeaf ifTrue: [
