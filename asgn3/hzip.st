@@ -13,7 +13,7 @@ Character extend [
                    ifFalse: [^ self asInteger printStringRadix: 16]
    ]
 ]
-
+"
 Object subclass: BitStream [
    |bitIndex byte myStream|
    BitStream class >> new: fileStream [
@@ -41,7 +41,7 @@ Object subclass: BitStream [
       ^byte
    ]
 ]
-
+"
 Object subclass: OutBits [
    |bitIndex currentByte myStream|
    OutBits class >> new [
@@ -240,20 +240,17 @@ FileStream extend [
    |bitIndex currentChar|
    nextBit [
       |bit|
-          bitIndex isNil ifTrue: [bitIndex := 0].
-          bitIndex = 0 ifTrue: [
-             bitIndex := 8.
-             currentChar := self next.
-          ].
-          bit := currentChar value bitAt: bitIndex.
-          bitIndex := bitIndex - 1.
-          ^ bit. 
+      bitIndex isNil ifTrue: [bitIndex := 0].
+      bitIndex = 0 ifTrue: [
+         bitIndex := 8.
+         currentChar := self next.
+      ].
+      bit := currentChar value bitAt: bitIndex.
+      bitIndex := bitIndex - 1.
+      ^ bit. 
    ]
    atBitEnd [
       ^ (bitIndex isNil | (bitIndex = 0)) & self atEnd
-   ]
-   backBit [
-      bitIndex := bitIndex + 1.
    ]
 ]
 
@@ -264,7 +261,6 @@ do: [:opt :arg |
     "Compress File"
     inName := Smalltalk getArgv: 2. 
     outName := Smalltalk getArgv: 3.
-    (outName isNil) ifTrue: [outname:= stdout].
 
     ((opt = $c) | (opt = $t)) ifTrue: [
         inFile := FileStream open: inName mode: FileStream read. 
@@ -353,11 +349,15 @@ do: [:opt :arg |
 
         (opt = $c) ifTrue: [
             '-c command' displayNl.
+            
             "If no file specified, print to stdout" 
-            outFile := FileStream open: outName.
+            outName isNil ifTrue: [
+                outFile := stdout. 
+            ] ifFalse: [
+                outFile := FileStream open: outName mode: FileStream write.
+            ].
 
-            root := sortcol removeFirst.
-            outBits := OutBits new: outFile. 
+            outBits := OutBits new: outFile.
             tree binTreeDump: outBits. 
             outBits writeBit: 1.
 
@@ -379,9 +379,12 @@ do: [:opt :arg |
 
     (opt = $u) ifTrue: [
         '-u command' displayNl.
-
         inFile := FileStream open: inName mode: FileStream read.      
-        outFile := FileStream open: outName.
+        outName isNil ifTrue: [
+            outFile := stdout.
+        ] ifFalse: [
+            outFile := FileStream open: outName.
+        ].
 
         outFile << 'farts' << nl.
 
@@ -426,6 +429,7 @@ do: [:opt :arg |
         node := root.
         eof := false.
         outFile << 'reconstructed bits' << nl.
+
         "Loop over rest of input file"  
         [(eof not) & (inFile atBitEnd not)] whileTrue: [
             |bit|
@@ -453,6 +457,7 @@ do: [:opt :arg |
                     node char asInteger = 256 ifTrue: [
                         eof := true.
                     ] ifFalse: [
+                        stdout << node char.
                         outFile << node char.
                         outFile << 'add node' << nl.  
                     ].
