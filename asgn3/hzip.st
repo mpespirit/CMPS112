@@ -329,7 +329,7 @@ do: [:opt :arg |
     ]. "End opt c/t"
 
     (opt = $u) ifTrue: [
-        |stack root node eof|
+        |stack|
         (opt = $d) ifTrue: ['-u command' displayNl].
 
         inFile := FileStream open: inName mode: FileStream read.      
@@ -387,8 +387,6 @@ do: [:opt :arg |
         [(eof not) & (inFile atBitEnd not)] whileTrue: [
             |bit|
             bit := inFile nextBit.
-
-            "outFile << 'Read bit' << nl."
             
             "Traverse tree for children"
             node isLeaf ifTrue: [
@@ -413,13 +411,11 @@ do: [:opt :arg |
                         outFile << node char.
                         (opt = $d) ifTrue: [outFile << 'add' << nl].  
                     ].
+                    node := root.
                 ]. 
-                node := root. 
             ].
         ]. "End of loop"
         
-        inFile close.
-        outFile close.
         (opt = $d) ifTrue: [outFile << 'finished' << nl].
     ]. "End opt u"
 ] ifError: [
