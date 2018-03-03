@@ -4,44 +4,6 @@ execname := '$RCSfile: bitstream.st,v $' =~ '.*: (.*),v.*' at: 1.
 
 nl := Character nl.
 
-Character extend [
-   isGraph [
-      ^ (Character space < self) & (self <= $~)
-   ]
-   visible [
-      self isGraph ifTrue: [^ '$', self asString]
-                   ifFalse: [^ self asInteger printStringRadix: 16]
-   ]
-]
-"
-Object subclass: BitStream [
-   |bitIndex byte myStream|
-   BitStream class >> new: fileStream [
-      |result|
-      result := super new.
-      result init: fileStream.
-      ^result
-   ]
-   init: fileStream [
-      myStream := fileStream.
-      bitIndex := 1.
-   ]
-   nextBit [
-      bitIndex = 1 ifTrue: [
-         byte := myStream next.
-         bitIndex := 9.
-      ].
-      bitIndex := bitIndex - 1.
-      ^byte value bitAt: bitIndex
-   ]
-   atEnd [
-      ^bitIndex = 1 and: [myStream atEnd]
-   ]
-   currByte [
-      ^byte
-   ]
-]
-"
 Object subclass: OutBits [
    |bitIndex currentByte myStream|
    OutBits class >> new [
@@ -181,17 +143,6 @@ Leaf subclass: Tree [
    ]
 ]
 
-"Count frequency of input characters"
-Character extend [
-   isPrint [
-      ^ (Character space <= self) & (self <= $~)
-   ]
-   visible [
-      self isPrint ifTrue: [^ '$', self asString]
-                   ifFalse: [^ self asInteger printStringRadix: 8]
-   ]
-]
-
 Object subclass: ZeroArray [
    |theArray|
 
@@ -304,7 +255,7 @@ do: [:opt :arg |
         ] prefix: ' '.
         
         (opt = $t) ifTrue: [
-            '-t command' displayNl.
+            (opt = $d) ifTrue: ['-t command' displayNl].
             encoded keysAndValuesDo: [:key :value | 
                 |bits count lt127 gt32 empty|
                 "The number of digits in count will determine the
@@ -332,12 +283,12 @@ do: [:opt :arg |
                     ]. 
                     ( gt32 not | lt127 not & empty not ) ifTrue: [
                         key1 := 
-                            ((key asInteger printStringRadix: 16) copyFrom: 4).
+                            ((key asInteger printStringRadix: 16) 
+                              copyFrom: 4).
                         stdout << 'x' << key1.
                         (key1 size == 1) ifTrue: [
                             stdout << '0'.
                         ].
-                        "((key asInteger printStringRadix: 16) copyFrom: 4)." 
                         1 to: (8-i) do: [ :x |
                             stdout << ' '. 
                         ].                    
@@ -348,13 +299,13 @@ do: [:opt :arg |
         ]."End opt t" 
 
         (opt = $c) ifTrue: [
-            '-c command' displayNl.
+            (opt = $d) ifTrue: ['-c command' displayNl].
             
             "If no file specified, print to stdout" 
             outName isNil ifTrue: [
                 outFile := stdout. 
             ] ifFalse: [
-                outFile := FileStream open: outName mode: FileStream write.
+                outFile := FileStream open: outName.
             ].
 
             outBits := OutBits new: outFile.
@@ -378,7 +329,9 @@ do: [:opt :arg |
     ]. "End opt c/t"
 
     (opt = $u) ifTrue: [
-        '-u command' displayNl.
+        |stack root node eof|
+        (opt = $d) ifTrue: ['-u command' displayNl].
+
         inFile := FileStream open: inName mode: FileStream read.      
         outName isNil ifTrue: [
             outFile := stdout.
@@ -386,7 +339,7 @@ do: [:opt :arg |
             outFile := FileStream open: outName.
         ].
 
-        outFile << 'farts' << nl.
+        (opt = $d) ifTrue: [outFile << nl << 'begin' << nl].
 
         "Helper variabes"
         byte := 0.
@@ -428,7 +381,7 @@ do: [:opt :arg |
         root := stack removeFirst. 
         node := root.
         eof := false.
-        outFile << 'reconstructed bits' << nl.
+        (opt = $d) ifTrue: [outFile << 'reconstructed bits' << nl].
 
         "Loop over rest of input file"  
         [(eof not) & (inFile atBitEnd not)] whileTrue: [
@@ -443,9 +396,9 @@ do: [:opt :arg |
                 node char asInteger = 256 ifTrue: [
                     eof := true.
                 ].
-                outFile << 'found leaf' << nl.
+                (opt = $d) ifTrue: [outFile << 'found leaf' << nl].
             ] ifFalse: [
-                outFile << 'traversing tree' << nl.
+                (opt = $d) ifTrue: [outFile << 'traversing tree' << nl].
 
                 "Write byte to file and reset pointer"
                 bit = 0 ifTrue: [ "0-Link"
@@ -457,16 +410,17 @@ do: [:opt :arg |
                     node char asInteger = 256 ifTrue: [
                         eof := true.
                     ] ifFalse: [
-                        stdout << node char.
                         outFile << node char.
-                        outFile << 'add node' << nl.  
+                        (opt = $d) ifTrue: [outFile << 'add' << nl].  
                     ].
                 ]. 
                 node := root. 
             ].
         ]. "End of loop"
         
-        outFile << 'finished' << nl.
+        inFile close.
+        outFile close.
+        (opt = $d) ifTrue: [outFile << 'finished' << nl].
     ]. "End opt u"
 ] ifError: [
     'Error: invalid option' displayN1.
