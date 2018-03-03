@@ -263,16 +263,8 @@ Smalltalk arguments: '-c -t -d -u'
 do: [:opt :arg | 
     "Compress File"
     ((opt = $c) | (opt = $t)) ifTrue: [
-        '-c command' displayNl.
-        
-        "Parse command line files"
-        inName  := Smalltalk getArgv: 2.
-        outName := Smalltalk getArgv: 3.
-
-        "No file specified, print to standard out"
-        (outName isNil) ifTrue: [outName := stdout].
-
-        inFile  := FileStream open: inName mode: FileStream read.
+        inName := Smalltalk getArgv: 2.
+        inFile := FileStream open: inName mode: FileStream read. 
 
         "Count frequency by iterating through file"
         table := ZeroArray new: 257.
@@ -311,10 +303,9 @@ do: [:opt :arg |
             index := char asInteger.
             encoded at: index put: string.
         ] prefix: ' '.
-
-        outFile := FileStream open: outName. 
         
         (opt = $t) ifTrue: [
+            '-t command' displayNl.
             encoded keysAndValuesDo: [:key :value | 
                 |bits count lt127 gt32 empty|
                 "The number of digits in count will determine the
@@ -329,35 +320,41 @@ do: [:opt :arg |
                 
                 "Print keys"
                 (key == 256) ifTrue: [
-                    outFile << 'EOF      ' << ' ' << count << ' '
+                    stdout << 'EOF      ' << ' ' << count << ' '
                             << value << nl.
                 ] ifFalse: [
                     (gt32 & lt127 & empty not) ifTrue: [
                         keyChar := key asCharacter.
-                        outFile << ' ' << keyChar. 
+                        stdout << ' ' << keyChar. 
                         1 to: (9-i) do: [ :x |
-                            outFile << ' '. 
+                            stdout << ' '. 
                         ]. 
-                        outFile << count << ' ' << value << nl.
+                        stdout << count << ' ' << value << nl.
                     ]. 
                     ( gt32 not | lt127 not & empty not ) ifTrue: [
                         key1 := 
                             ((key asInteger printStringRadix: 16) copyFrom: 4).
-                        outFile << 'x' << key1.
+                        stdout << 'x' << key1.
                         (key1 size == 1) ifTrue: [
-                            outFile << '0'.
+                            stdout << '0'.
                         ].
                         "((key asInteger printStringRadix: 16) copyFrom: 4)." 
                         1 to: (8-i) do: [ :x |
-                            outFile << ' '. 
+                            stdout << ' '. 
                         ].                    
-                        outFile << count << ' ' << value << nl.
+                        stdout << count << ' ' << value << nl.
                     ].
                 ].
             ]. "End tree print" 
         ]."End opt t" 
 
         (opt = $c) ifTrue: [
+            '-c command' displayNl.
+            "If no file specified, print to stdout" 
+            outName := Smalltalk getArgv: 3.
+            outName isNil ifTrue: [outname := stdout]. 
+            outFile := FileStream open: outName.
+
             root := sortcol removeFirst.
             outBits := OutBits new: outFile. 
             tree binTreeDump: outBits. 
