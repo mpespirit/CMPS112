@@ -70,32 +70,50 @@ writepath( [Head|Tail] ) :-
 
  */
 
+/* Base Case: Check if successfully reached destination */
+listpath( arr, arr, _, [arr], _ ).
+
 /* 
- * FindPath - Recusive function
- * Parameters: ( Origin, Destination, Stops, [ Origin | List ], time )
- * Base Case : To/From same airport
- * 
- *
+ * Case 1: Find direct path to location
+ *    Retrieve flight info from database
+ *    Check if node has been visited already
+ *    Calculate arrival time to destination 
+ *    Recursive call on list path to destination 
+ */ 
+listpath( dept, arr, stops, [[dept, dept_time, arr_time] | list], t) :-
+   flight( dept, arr, t ),
+   not( member( arr, stops ) ),
+   convert_to_hrs( t, dept_time ),
+   arrival_time( dept, arr, dept_time, arr_time ), 
+   arr_time < 24.0,
+   listpath( arr, arr, [arr | stops], List, _ ).
+
+/* 
+ * Case 2: Find path to location with stopovers
+ *   Retrieve flight info from database to stopover 
+ *   Check if node has been visited already
+ *   Calculate arrival time to destination
+ *   Retrieve all paths from database from stopover
+ *   Check if there is at least 30 min for a transfer
+ *   Recursive call to destination
  */
-listpath( ).
-listpath() :- 
+listpath( dept, arr, stops, [[dept, dept_time, arr_time] | list], t) :-
+   flight( dept, stop, t ),
+   not( member( stop, stops) ),
+   convert_to_hrs( t, dept_time ),
+   arrival_time( dept, stop, dept_time, arr_time ),
+   arr_time < 24.0,
+   
+   /* Find flight from layover to next location */
+   flight( stop, _, stop_dept_time),
+   convert_to_hrs( stop_dept_time, new_dept_time),
+   transfer_time is new_dept_time - arr_time - 0.5,
+   transfer_time >= 0,
+   findpath( stop, arr, [stop | stops], list, stop_dept_time). 
 
-.
-listpath() :-
 
-.
 
-/*
 
-Helpers from graphpaths.pl
 
-listpath( Node, End, Outlist ) :-
-   listpath( Node, End, [Node], Outlist ).
 
-listpath( Node, Node, _, [Node] ).
-listpath( Node, End, Tried, [Node|List]) :-
-   link( Node, Next),
-   not( member( Next, Tried)),
-   listpath( Next, End, [Next|Tried], List ).
 
-*/
