@@ -166,12 +166,10 @@ listpath( Dept, Arr, Stops,
          listpath( Stop, Arr, [Stop | Stops], List, Stop_Dept_Time ).   
 
    
-
-/* Case 1: Departing and arriving from same location */
+/* Case 1: Same airport */
 fly( Dept, Dept ) :-
-    write( 'Error: Duplicate departure and arrival airports.' ), nl,
+   write( 'Error: Trying to fly to same airport' ), nl,
    !, fail.
-
 
 /* Case 2: Flight path found */
 fly( Dept, Arr ) :-
@@ -191,7 +189,3 @@ fly( Dept, Arr ) :-
    write( 'Error: No path found.' ), nl,
    !, fail.
 
-/* Case 4: Invalid airport selection */
-fly( _, _ ) :-
-   write( 'Error: Airport selected does not exist.' ), nl,
-   !, fail.
