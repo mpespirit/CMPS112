@@ -17,21 +17,20 @@ convert_to_hrs( miles, hours) :-
    hours is miles / 500.
 
 /* Convert time to hours */
-time_in_hrs( time(hours, mins), hoursonly) :-
+time_in_hrs( time( hours, mins ), hoursonly) :-
    hoursonly is hours + mins / 60.  
 
 /* 
  * Haversine distance formula 
  * Calulate circle path between 2 points
  */
-haversine( lat1, lon1, lat2, lon2, d ) :- 
+haversine( lat1, lon1, lat2, lon2, distance ) :- 
    dlon is lon2 - lon1,
    dlat is lat2 - lat1,
    a is sin( dlat / 2 ) ** 2 
       + cos( lat1 ) * cos( lat2 ) * sin( dlon / 2 ) ** 2,
-   c is 2 * atan2( sqrt(a), sqrt(1 - a) ),
-   r is 3961, /* Earth's radius in mi */
-   d is r * c. 
+   dist is 2 * atan2( sqrt(a), sqrt(1 - a) ),
+   distance is dist * 3961. 
 
 /*
  * Calculate distance between 2 values
@@ -40,7 +39,6 @@ haversine( lat1, lon1, lat2, lon2, d ) :-
  *     convert values to radians
  *     calculate haversine value
  *        return miles
- *     find elapsed time (mi * hr/mi)
  *     let arrival time be elapsed + departure time
  */
 arrival_time( start, end, dept_time, arr_time ) :-
@@ -53,8 +51,7 @@ arrival_time( start, end, dept_time, arr_time ) :-
    convert_to_rad( dm_lon2, r_lon2 ), 
 
    haversine( r_lat1, r_lon1, r_lat2, r_lon2, distance ),
-   elapsed_time is ( distance / 500 ), 
-   arr_time is elapsed_time + dept_time. 
+   arr_time is convert_to_hrs( distance ) + dept_time. 
 
 
 
@@ -129,7 +126,7 @@ writepath( [[dept, last_dept_time, last_arr_time],
       write( arr ), write( ' ' ), write( arr_name ),
       format_time( last_arr_time ), nl,
 
-   !, writepath( [[dept, new_dept_time, new_arr_time] | next_stop]).
+   !, writepath( [[arr, new_dept_time, new_arr_time] | next_stop]).
 
 
 /* Base Case: Check if successfully reached destination */
@@ -146,7 +143,7 @@ listpath( arr, arr, _, [arr], _ ).
 listpath( dept, arr, stops, [[dept, dept_time, arr_time] | list], t) :-
    flight( dept, arr, t ),
    not( member( arr, stops ) ),
-   convert_to_hrs( t, dept_time ),
+   time_in_hours( t, dept_time ),
    arrival_time( dept, arr, dept_time, arr_time ), 
    arr_time < 24.0,
       listpath( arr, arr, [arr | stops], list, _ ).
@@ -163,43 +160,41 @@ listpath( dept, arr, stops, [[dept, dept_time, arr_time] | list], t) :-
 listpath( dept, arr, stops, [[dept, dept_time, arr_time] | list], t) :-
    flight( dept, stop, t ),
    not( member( stop, stops) ),
-   convert_to_hrs( t, dept_time ),
+   time_in_hrs( t, dept_time ),
    arrival_time( dept, stop, dept_time, arr_time ),
    arr_time < 24.0,
       /* Find flight from layover to next location */
       flight( stop, _, stop_dept_time),
-      convert_to_hrs( stop_dept_time, new_dept_time),
+      time_in_hrs( stop_dept_time, new_dept_time),
       transfer_time is new_dept_time - arr_time - 0.5,
       transfer_time >= 0,
          findpath( stop, arr, [stop | stops], list, stop_dept_time). 
 
 
 
-/* Case 1: Invalid airports */
-/*
-fly( _, _ ) :-
-   write( 'Error: Please select an airport from database.' ), nl,
-   !, fail.
-*/
-/* Case 2: Departing and arriving from same location */
+/* Case 1: Departing and arriving from same location */
 fly( dept, dept ) :- 
    write( 'Error: Duplicate departure and arrival airports.' ), nl,
    !, fail.
 
-/* Case 3: Flight path found */
+/* Case 2: Flight path found */
 fly( dept, arr ) :-
+   write('case 3'), nl,
    airport( dept, _, _, _ ),
    airport( arr, _ , _, _ ),
-   write('Lets fly bitch'),
    listpath( dept, arr, [dept], list, _ ),
    !, nl,
-      writepath( list ),
+   writepath( list ),
    true.
 
-/* Case 4: No result */
+/* Case 3: No path from origin to destination */
 fly( dept, arr ) :- 
    airport( dept, _, _, _ ), 
    airport( arr, _, _, _ ),
    write( 'Error: No path found.' ), nl,
    !, fail.
 
+/* Case 4: Invalid airport selection */
+fly( _, _ ) :-
+   write( 'Error: Airport selected does not exist.' ), nl,
+   !, fail.
