@@ -42,13 +42,13 @@ haversine( lat1, lon1, lat2, lon2, distance ) :-
  *     let arrival time be elapsed + departure time
  */
 arrival_time( start, end, dept_time, arr_time ) :-
-   airport( start, _, dm_lat1, dm_lon1 ),
-   airport( end, _, dm_lat2, dm_lon2 ),
+   airport( start, _, degmin(d_lat1, m_lat1), degmin(d_lon1, m_lon1) ),
+   airport( end, _, degmin(d_lat2, m_lat2), degmin(d_lon2, m_lon2)),
 
-   convert_to_rad( dm_lat1, r_lat1 ),
-   convert_to_rad( dm_lat2, r_lat2 ),
-   convert_to_rad( dm_lon1, r_lon1 ),
-   convert_to_rad( dm_lon2, r_lon2 ), 
+   convert_to_rad( degmin(d_lat1, m_lat1), r_lat1 ),
+   convert_to_rad( degmin(d_lon1, m_lon1), r_lon2 ),
+   convert_to_rad( degmin(d_lat2, m_lat2), r_lat2 ),
+   convert_to_rad( degmin(d_lon2, m_lon2), r_lon2 ), 
 
    haversine( r_lat1, r_lon1, r_lat2, r_lon2, distance ),
    arr_time is convert_to_hrs( distance ) + dept_time. 
@@ -179,9 +179,9 @@ fly( dept, dept ) :-
 
 /* Case 2: Flight path found */
 fly( dept, arr ) :-
-   write('case 3'), nl,
    airport( dept, _, _, _ ),
    airport( arr, _ , _, _ ),
+
    listpath( dept, arr, [dept], list, _ ),
    !, nl,
    writepath( list ),
@@ -195,6 +195,8 @@ fly( dept, arr ) :-
    !, fail.
 
 /* Case 4: Invalid airport selection */
+/*
 fly( _, _ ) :-
    write( 'Error: Airport selected does not exist.' ), nl,
    !, fail.
+*/
